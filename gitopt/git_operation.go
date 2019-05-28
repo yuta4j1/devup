@@ -22,6 +22,7 @@ func GitAdd(w *Worktree, glob string) error {
 
 // git commit operation
 func GitCommit(wt *Worktree, msg string, opt *CommitOptions) (plumbing.Hash, error) {
+	fmt.Println("[git commit]")
 	ph, err := wt.Commit(msg, opt)
 	return ph, err
 }
