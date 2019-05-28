@@ -3,36 +3,45 @@ package main
 import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"fmt"
+	"path"
 	"os"
 	"time"
 	"log"
 	"gopkg.in/urfave/cli.v1"
 	. "gopkg.in/src-d/go-git.v4"
 	. "gopkg.in/src-d/go-git.v4/plumbing"
+	"github.com/google/go-github/github"
 	"./gitopt"
 )
 
 func main() {
 
 	var targetPath string
+	var accessToken string
 	app := cli.NewApp()
 	app.Name = "devup"
 	app.Flags = []cli.Flag {
+		// path (absolute path)
 		cli.StringFlag{
-			Name: "path",
+			Name: "path, p",
 			Usage: "starting propject path",
 			Destination: &targetPath,
+		},
+		// github access token
+		cli.StringFlag{
+			Name: "token, t",
+			Usage: "your github account access token",
+			Destination: &accessToken,
 		},
 	}
 	app.Action = func(c *cli.Context) error {
 		// default path is current directory
-		// getPath := currentDir()
-		// テスト用
+		// if targetPath == "" {
+		// 	targetPath = currentDir()
+		// }
+		// 動作確認用
 		getPath := "C:\\Users\\kasca\\OneDrive\\ドキュメント\\git-test\\srctest2"
-		if c.NArg() > 0 {
-			getPath = c.Args()[0]
-		}
-		log.Println("getPath: ", getPath)
+		projName := projectName(getPath)
 		// git init
 		repo, err := gitopt.GitInit(getPath)
 		if err != nil {
@@ -51,8 +60,9 @@ func main() {
 		if addErr != nil {
 			log.Fatal(err)
 		}
-
-		hash, err := gitopt.GitCommit(workTree, "first commit", &CommitOptions{
+		// git commit
+		// don't use hash at this point
+		_, err = gitopt.GitCommit(workTree, "first commit", &CommitOptions{
 			All: true,
 			Author: &object.Signature{
 				Name: "yuta4j1",
@@ -60,20 +70,30 @@ func main() {
 				When: time.Now(),
 			},
 		})
-		fmt.Println(hash)
-		// アクセストークンを取得する
-		gitopt.FetchAccessToken()
-		// プロジェクト名から、同名リポジトリがリモートリポジトリに存在するかをチェックする
-		// 存在する場合、リモートリポジトリに既存プロジェクトが存在するため、
-		// 処理の続行 or 中断を選択するコマンドを表示する
+		// gitopt.FetchAccessToken()
+		// Initialize github client object
+		githubClient, ctx := gitopt.InitClient(accessToken)
+		repos, _, err := githubClient.Repositories.List(ctx, "", nil)
+		// verify whether there is a project with the same name as local repository in the remote repository
+		for _, repo := range repos {
+			if projName == *repo.Name {
+				fmt.Println("[abort] A same name project already exists in remote repository.")
+				return nil
+			}
+		}
+
+		// create new project at remote repository
+		newRepo, _, err := githubClient.Repositories.Create(ctx, "", &github.Repository{
+			Name: &projName,
+		})
+		fmt.Println("[created remote repository!]")
+		fmt.Println("repo ID: ", *newRepo.ID)
+		fmt.Println("repo FullName: ", *newRepo.FullName)
+		fmt.Println("repo MasterBranch: ", *newRepo.MasterBranch)
+		fmt.Println("repo CreatedAt: ", *newRepo.CreatedAt)
+		fmt.Println("repo CloneURL: ", *newRepo.CloneURL)
 
 		// 同名リポジトリがない場合、リモートリポジトリを作成し、git pushする。
-
-		
-
-		// TODO git commit
-		// TODO create remote repository
-		
 		return nil
 	}
 	err := app.Run(os.Args)
@@ -82,7 +102,12 @@ func main() {
 	}
 }
 
+// get current directory path
 func currentDir() string {
 	cur, _ := os.Getwd()
 	return cur
+}
+
+func projectName(dirPath string) string {
+	return path.Base(dirPath)
 }
