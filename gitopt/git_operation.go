@@ -16,11 +16,6 @@ func GitInit(path string) (*git.Repository, error) {
 	return repo, err
 }
 
-func ExistsMasterBranch(r *git.Repository) (*config.Branch, error) {
-	b, err := r.Branch("master")
-	return b, err
-}
-
 // git add operation
 func GitAdd(w *git.Worktree, glob string) error {
 	fmt.Println("[git Add]")
@@ -42,10 +37,10 @@ func GitCreateRemote(r git.Repository, cloneUrl string) (*git.Remote, error) {
 		Name: "origin",
 		URLs: []string{cloneUrl},
 	})
-
 	return remote, err
 }
 
+// create 'master' branch
 func GitCreateBranch(r git.Repository) error {
 	err := r.CreateBranch(&config.Branch{
 		Name: "master",
@@ -59,7 +54,6 @@ func GitCreateBranch(r git.Repository) error {
 func GitPush(r *git.Remote, ctx context.Context, userName string, password string) error {
 	err := r.Push(&git.PushOptions{
 		RemoteName: r.Config().Name,
-		RefSpecs: r.Config().Fetch,
 		Auth: &http.BasicAuth{
 			Username: userName,
 			Password: password,
