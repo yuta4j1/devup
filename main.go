@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 	"log"
+	"github.com/c-bata/go-prompt"
 	"gopkg.in/urfave/cli.v1"
 	. "gopkg.in/src-d/go-git.v4"
-	. "gopkg.in/src-d/go-git.v4/plumbing"
 	"./gitopt"
 )
 
@@ -115,7 +115,17 @@ func main() {
 		fmt.Println("[branch config] Remote: ", bConf.Remote)
 
 
-		err = gitopt.GitPush(remoteRepo, ctx)
+		fmt.Println("Please input your username.")
+		userName := prompt.Input(": ", makeCompleter(
+			prompt.Suggest{Text: "username", Description: "your username for authentication"}))
+		fmt.Println("your UserName: ", userName)
+		fmt.Println("Please input your password.")
+		password := prompt.Input(": ", makeCompleter(
+			prompt.Suggest{Text: "password", Description: "your passwords for authentication"}))
+		fmt.Println("your Password: ", password)
+
+		// git push
+		err = gitopt.GitPush(remoteRepo, ctx, userName, password)
 		if err != nil {
 			log.Fatal("[git push]", err)
 		}		
@@ -127,6 +137,20 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
+func makeCompleter(s ...prompt.Suggest) (f func(prompt.Document) []prompt.Suggest) {
+	return func(d prompt.Document) []prompt.Suggest {
+		return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
+	}
+}
+
+// func completer(d prompt.Document) []prompt.Suggest {
+// 	s := []prompt.Suggest{
+// 		{Text: "username", Description: "your username for authentication"},
+// 		{Text: "password", Description: "your password for authentication"},
+// 	}
+// 	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
+// }
 
 // get current directory path
 func currentDir() string {
