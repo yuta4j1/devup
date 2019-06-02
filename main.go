@@ -69,16 +69,13 @@ func main() {
 				When: time.Now(),
 			},
 		})
-		// gitopt.FetchAccessToken()
 		// Initialize github client object
-		// git commitしたユーザ名のアカウントが存在するかどうかを確認する
 		githubClient, ctx := gitopt.InitClient(accessToken)
 		user, _, err := githubClient.Users.Get(ctx, "yuta4j1")
 		fmt.Println("[URL]", *user.URL)
 		fmt.Println("[URL]", *user.ReposURL)
 
 		// TODO validation access token
-		// user名の指定
 		repos, _, err := githubClient.Repositories.List(ctx, "", nil)
 		// verify whether there is a project with the same name as local repository in the remote repository
 		for _, repo := range repos {
@@ -103,32 +100,24 @@ func main() {
 			log.Fatal(err)
 		}
 
+		fmt.Println("Please input your username.")
+		userName := prompt.Input(": ", makeCompleter(
+			prompt.Suggest{Text: "username", Description: "your username for authentication"}))
+		fmt.Println("Please input your password.")
+		// TODO mask password input
+		password := prompt.Input(": ", makeCompleter(
+			prompt.Suggest{Text: "password", Description: "your passwords for authentication"}))
+
+		// create 'master' branch
 		err = gitopt.GitCreateBranch(*repo)
 		if err != nil {
 			log.Fatal(err)
 		}
-		bConf, err := gitopt.ExistsMasterBranch(repo)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("[branch config] Name: ", bConf.Name)
-		fmt.Println("[branch config] Remote: ", bConf.Remote)
-
-
-		fmt.Println("Please input your username.")
-		userName := prompt.Input(": ", makeCompleter(
-			prompt.Suggest{Text: "username", Description: "your username for authentication"}))
-		fmt.Println("your UserName: ", userName)
-		fmt.Println("Please input your password.")
-		password := prompt.Input(": ", makeCompleter(
-			prompt.Suggest{Text: "password", Description: "your passwords for authentication"}))
-		fmt.Println("your Password: ", password)
-
 		// git push
 		err = gitopt.GitPush(remoteRepo, ctx, userName, password)
 		if err != nil {
 			log.Fatal("[git push]", err)
-		}		
+		}	
 
 		return nil
 	}
@@ -144,20 +133,13 @@ func makeCompleter(s ...prompt.Suggest) (f func(prompt.Document) []prompt.Sugges
 	}
 }
 
-// func completer(d prompt.Document) []prompt.Suggest {
-// 	s := []prompt.Suggest{
-// 		{Text: "username", Description: "your username for authentication"},
-// 		{Text: "password", Description: "your password for authentication"},
-// 	}
-// 	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
-// }
-
 // get current directory path
 func currentDir() string {
 	cur, _ := os.Getwd()
 	return cur
 }
 
+// get project name from a given path
 func projectName(dirPath string) string {
 	return filepath.Base(dirPath)
 }
