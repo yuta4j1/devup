@@ -3,14 +3,13 @@ package main
 import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"fmt"
-	"path"
+	"path/filepath"
 	"os"
 	"time"
 	"log"
 	"gopkg.in/urfave/cli.v1"
 	. "gopkg.in/src-d/go-git.v4"
 	. "gopkg.in/src-d/go-git.v4/plumbing"
-	"github.com/google/go-github/github"
 	"./gitopt"
 )
 
@@ -72,7 +71,14 @@ func main() {
 		})
 		// gitopt.FetchAccessToken()
 		// Initialize github client object
+		// git commitしたユーザ名のアカウントが存在するかどうかを確認する
 		githubClient, ctx := gitopt.InitClient(accessToken)
+		user, _, err := githubClient.Users.Get(ctx, "yuta4j1")
+		fmt.Println("[URL]", *user.URL)
+		fmt.Println("[URL]", *user.ReposURL)
+
+		// TODO validation access token
+		// user名の指定
 		repos, _, err := githubClient.Repositories.List(ctx, "", nil)
 		// verify whether there is a project with the same name as local repository in the remote repository
 		for _, repo := range repos {
@@ -83,17 +89,37 @@ func main() {
 		}
 
 		// create new project at remote repository
-		newRepo, _, err := githubClient.Repositories.Create(ctx, "", &github.Repository{
-			Name: &projName,
-		})
+		newRepo, _, err := gitopt.GithubCreateRepository(githubClient, ctx, projName)
 		fmt.Println("[created remote repository!]")
 		fmt.Println("repo ID: ", *newRepo.ID)
 		fmt.Println("repo FullName: ", *newRepo.FullName)
-		fmt.Println("repo MasterBranch: ", *newRepo.MasterBranch)
 		fmt.Println("repo CreatedAt: ", *newRepo.CreatedAt)
 		fmt.Println("repo CloneURL: ", *newRepo.CloneURL)
+		
 
-		// 同名リポジトリがない場合、リモートリポジトリを作成し、git pushする。
+		// git remote add
+		remoteRepo, err := gitopt.GitCreateRemote(*repo, "https://github.com/yuta4j1/" + projName + ".git")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = gitopt.GitCreateBranch(*repo)
+		if err != nil {
+			log.Fatal(err)
+		}
+		bConf, err := gitopt.ExistsMasterBranch(repo)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("[branch config] Name: ", bConf.Name)
+		fmt.Println("[branch config] Remote: ", bConf.Remote)
+
+
+		err = gitopt.GitPush(remoteRepo, ctx)
+		if err != nil {
+			log.Fatal("[git push]", err)
+		}		
+
 		return nil
 	}
 	err := app.Run(os.Args)
@@ -109,5 +135,5 @@ func currentDir() string {
 }
 
 func projectName(dirPath string) string {
-	return path.Base(dirPath)
+	return filepath.Base(dirPath)
 }
