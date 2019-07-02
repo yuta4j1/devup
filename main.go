@@ -1,17 +1,23 @@
 package main
 
 import (
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"fmt"
 	"path/filepath"
 	"os"
 	"time"
 	"log"
 	"github.com/c-bata/go-prompt"
+	"github.com/motemen/go-gitconfig"
 	"gopkg.in/urfave/cli.v1"
 	. "gopkg.in/src-d/go-git.v4"
-	"./gitopt"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"github.com/yuta4j1/devup/gitopt"
 )
+
+type User struct {
+	UserName string `gitconfig:"user.name"`
+	Email string `gitconfig:"user.email"`
+}
 
 func main() {
 
@@ -35,14 +41,12 @@ func main() {
 	}
 	app.Action = func(c *cli.Context) error {
 		// default path is current directory
-		// if targetPath == "" {
-		// 	targetPath = currentDir()
-		// }
-		// 動作確認用
-		getPath := "C:\\Users\\kasca\\OneDrive\\ドキュメント\\git-test\\srctest2"
-		projName := projectName(getPath)
+		if targetPath == "" {
+			targetPath = currentDir()
+		}
+		projName := projectName(targetPath)
 		// git init
-		repo, err := gitopt.GitInit(getPath)
+		repo, err := gitopt.GitInit(targetPath)
 		if err != nil {
 			log.Fatal(err)
 			// if target repository is already initialized, advance the process regardless.
@@ -61,17 +65,22 @@ func main() {
 		}
 		// git commit
 		// don't use hash at this point
+		// get git-config info
+		var config User
+		err = gitconfig.Load(&config)
+		fmt.Println("[giyconfig] UserName", config.UserName)
+		fmt.Println("[giyconfig] UserName", config.Email)
 		_, err = gitopt.GitCommit(workTree, "first commit", &CommitOptions{
 			All: true,
 			Author: &object.Signature{
-				Name: "yuta4j1",
-				Email: "kascado.ys10@gmail.com",
+				Name: config.UserName,
+				Email: config.Email,
 				When: time.Now(),
 			},
 		})
 		// Initialize github client object
 		githubClient, ctx := gitopt.InitClient(accessToken)
-		user, _, err := githubClient.Users.Get(ctx, "yuta4j1")
+		user, _, err := githubClient.Users.Get(ctx, config.UserName)
 		fmt.Println("[URL]", *user.URL)
 		fmt.Println("[URL]", *user.ReposURL)
 
@@ -95,7 +104,7 @@ func main() {
 		
 
 		// git remote add
-		remoteRepo, err := gitopt.GitCreateRemote(*repo, "https://github.com/yuta4j1/" + projName + ".git")
+		remoteRepo, err := gitopt.GitCreateRemote(*repo, "https://github.com/yuta4j1" + projName + ".git")
 		if err != nil {
 			log.Fatal(err)
 		}
