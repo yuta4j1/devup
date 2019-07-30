@@ -2,43 +2,65 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
-	"os"
-	"time"
 	"log"
+	"os"
+	"path/filepath"
 	"syscall"
-    "golang.org/x/crypto/ssh/terminal"
+	"time"
+
 	"github.com/c-bata/go-prompt"
+	"github.com/kyokomi/emoji"
 	"github.com/motemen/go-gitconfig"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/yuta4j1/devup/gitopt"
+	"golang.org/x/crypto/ssh/terminal"
 	. "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
-	"github.com/yuta4j1/devup/gitopt"
-	"github.com/kyokomi/emoji"
+	"gopkg.in/urfave/cli.v1"
 )
 
 type User struct {
 	UserName string `gitconfig:"user.name"`
-	Email string `gitconfig:"user.email"`
+	Email    string `gitconfig:"user.email"`
 }
 
 func main() {
 
+	cli.AppHelpTemplate = `NAME:
+	{{.Name}} - {{.Usage}}
+ USAGE:
+	{{.Name}} {{if .VisibleFlags}}[global options]{{end}}{{if .Commands}}{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}
+	{{if len .Authors}}
+ AUTHOR:
+	{{range .Authors}}{{ . }}{{end}}
+	{{end}}{{if .Commands}}
+ COMMANDS:
+ {{range .Commands}}{{if not .HideHelp}}   {{join .Names ", "}}{{ "\t"}}{{.Usage}}{{ "\n" }}{{end}}{{end}}{{end}}{{if .VisibleFlags}}
+ GLOBAL OPTIONS:
+	{{range .VisibleFlags}}{{.}}
+	{{end}}{{end}}{{if .Copyright }}
+ COPYRIGHT:
+	{{.Copyright}}
+	{{end}}{{if .Version}}
+ VERSION:
+	{{.Version}}
+	{{end}}
+	`
 	var targetPath string
 	var accessToken string
 	app := cli.NewApp()
 	app.Name = "devup"
-	app.Flags = []cli.Flag {
+	app.Usage = "Start development on GitHub with a single command line."
+	app.Flags = []cli.Flag{
 		// path (absolute path)
 		cli.StringFlag{
-			Name: "path, p",
-			Usage: "starting propject path",
+			Name:        "path, p",
+			Usage:       "Target project path. If you don't specify it, target current directory.",
 			Destination: &targetPath,
 		},
 		// github access token
 		cli.StringFlag{
-			Name: "token, t",
-			Usage: "your github account access token",
+			Name:        "token, t",
+			Usage:       "Your github account access token. This flag is required.",
 			Destination: &accessToken,
 		},
 	}
@@ -76,9 +98,9 @@ func main() {
 		_, err = gitopt.GitCommit(workTree, "first commit", &CommitOptions{
 			All: true,
 			Author: &object.Signature{
-				Name: config.UserName,
+				Name:  config.UserName,
 				Email: config.Email,
-				When: time.Now(),
+				When:  time.Now(),
 			},
 		})
 		fmt.Println("✔ git Commit")
@@ -107,10 +129,9 @@ func main() {
 		fmt.Println("  FullName: ", *newRepo.FullName)
 		fmt.Println("  CreatedAt: ", *newRepo.CreatedAt)
 		fmt.Println("  CloneURL: ", *newRepo.CloneURL)
-		
 
 		// git remote add
-		remoteRepo, err := gitopt.GitCreateRemote(*repo, "https://github.com/" + accountName + "/" + projName + ".git")
+		remoteRepo, err := gitopt.GitCreateRemote(*repo, "https://github.com/"+accountName+"/"+projName+".git")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -144,6 +165,13 @@ func main() {
 		emoji.Println(":tada:")
 
 		return nil
+	}
+	app.Version = "0.1.0"
+	app.Authors = []cli.Author{
+		cli.Author{
+			Name:  "yuta4j1",
+			Email: "kascado.ys10@gmail.com",
+		},
 	}
 	err := app.Run(os.Args)
 	if err != nil {
