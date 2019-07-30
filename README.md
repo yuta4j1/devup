@@ -1,6 +1,6 @@
 ## devup
-When developing on GitHub, you must first take several steps. 
-For example, create a local repository in the project folder, commit the source, then create a remote repository, push from the local repository to the remote repository ...
+When developing on GitHub, you must first take several steps.  
+For example, create a local repository in the project folder, commit the source, then create a remote repository, push from the local repository to the remote repository ...  
 The command line tool runs them with one command.
 
 ## Usage
